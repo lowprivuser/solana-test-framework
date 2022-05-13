@@ -17,25 +17,24 @@ impl ProgramTestContextExtension for ProgramTestContext {
         clock.unix_timestamp = timestamp;
 
         if now >= timestamp {
-            println!("Timestamp incorrect. Cannot turn time back.");
+            println!("Timestamp incorrect. Cannot set time backwards.");
             return Err(ProgramTestError::InvalidWarpSlot);
         }
 
         let ns_per_slot = self.genesis_config().ns_per_slot();
         let timestamp_diff_ns = timestamp
             .checked_sub(now) //calculate time diff
-            .expect("Problem with sub new timestamp with current one")
+            .expect("Problem with timestamp diff calculation.")
             .checked_mul(1000000000) //convert from s to ns
-            .expect("Problem with sub new timestamp with current one")
+            .expect("Problem with timestamp diff calculation.")
             as u128;
 
         let slots = timestamp_diff_ns
             .checked_div(ns_per_slot)
-            .expect("Problem with sub new timestamp with current one") as u64;
+            .expect("Problem with slots from timestamp calculation.") as u64;
 
         self.set_sysvar(&clock);
-        self.warp_to_slot(current_slot + slots)
-            .expect("Cannot move to timestamp");
+        self.warp_to_slot(current_slot + slots)?;
 
         Ok(())
     }
