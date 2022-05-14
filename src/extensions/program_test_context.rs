@@ -11,6 +11,8 @@ pub trait ProgramTestContextExtension {
 #[async_trait]
 impl ProgramTestContextExtension for ProgramTestContext {
     async fn warp_to_timestamp(&mut self, timestamp: i64) -> Result<(), ProgramTestError> {
+        const NANOSECONDS_IN_SECOND: i64 = 1_000_000_000;
+
         let mut clock: Clock = self.banks_client.get_sysvar().await.unwrap();
         let now = clock.unix_timestamp;
         let current_slot = clock.slot;
@@ -25,7 +27,7 @@ impl ProgramTestContextExtension for ProgramTestContext {
         let timestamp_diff_ns = timestamp
             .checked_sub(now) //calculate time diff
             .expect("Problem with timestamp diff calculation.")
-            .checked_mul(1000000000) //convert from s to ns
+            .checked_mul(NANOSECONDS_IN_SECOND) //convert from s to ns
             .expect("Problem with timestamp diff calculation.")
             as u128;
 
