@@ -13,6 +13,11 @@ use solana_sdk::{
     transport
 };
 
+use spl_associated_token_account::{
+    get_associated_token_address,
+    create_associated_token_account
+};
+
 #[cfg(feature = "anchor")]
 use anchor_lang::AccountDeserialize;
 
@@ -86,6 +91,16 @@ pub trait BanksClientExtensions {
         _mint: &Pubkey,
         _payer: &Keypair
     ) -> transport::Result<()> {
+        unimplemented!();
+    }
+
+    /// Create a new SPL Associated Token Account
+    async fn create_associated_token_account(
+        &mut self,
+        _authority: &Pubkey,
+        _mint: &Pubkey,
+        _payer: &Keypair
+    ) -> transport::Result<Pubkey> {
         unimplemented!();
     }
 }
@@ -214,5 +229,32 @@ impl BanksClientExtensions for BanksClient {
                 latest_blockhash
             )
         ).await
+    }
+
+    async fn create_associated_token_account(
+        &mut self,
+        account: &Pubkey,
+        mint: &Pubkey,
+        payer: &Keypair
+    ) -> transport::Result<Pubkey>  {
+        let latest_blockhash = self.get_latest_blockhash().await?;
+        let associated_token_account = get_associated_token_address(account, mint);
+        let ix = create_associated_token_account(
+            &payer.pubkey(), 
+            &account, 
+            &mint
+        );
+
+        self.process_transaction(
+            Transaction::new_signed_with_payer(
+                &[ix],
+                Some(&payer.pubkey()),
+                &[payer],
+                latest_blockhash
+            )
+        ).await?;
+
+        return Ok(associated_token_account);
+        
     }
 }
