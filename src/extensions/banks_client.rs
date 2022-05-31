@@ -255,6 +255,5 @@ impl BanksClientExtensions for BanksClient {
         ).await?;
 
         return Ok(associated_token_account);
-        
     }
 }
