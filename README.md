@@ -5,6 +5,8 @@ It extends [`BanksClient`](https://docs.rs/solana-banks-client/latest/solana_ban
 [`ProgramTest`](https://docs.rs/solana-program-test/latest/solana_program_test/struct.ProgramTest.html)
 and [`ProgramTestContext`](https://docs.rs/solana-program-test/latest/solana_program_test/struct.ProgramTestContext.html) with several convenience methods.
 
+
+
 &nbsp;
 &nbsp;
 
@@ -24,6 +26,7 @@ async fn transaction_from_instructions(
 Return an [`Anchor`](https://docs.rs/anchor-lang/latest/anchor_lang/trait.AccountDeserialize.html) account of type `T` at given address at the time of the most recent root slot and deserialize its data.
 If the account is not found, `None` is returned.
 ```rust
+#[cfg(feature = "anchor")]
 fn get_anchor_account_data<T: AccountDeserialize>(
     &mut self,
     address: Pubkey
@@ -101,6 +104,7 @@ pub fn add_account_with_data(
 
 Add account with anchor.
 ```rust
+#[cfg(feature = "anchor")]
 pub fn add_account_with_anchor<T: AccountSerialize + AnchorSerialize + Discriminator>(
     &mut self,
     pubkey: Pubkey,
