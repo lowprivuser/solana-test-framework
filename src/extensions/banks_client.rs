@@ -157,6 +157,7 @@ impl BanksClientExtensions for BanksClient {
                 &owner
             )
         ).await
+        .map_err(Into::into)
     }
 
     async fn create_token_mint(
@@ -194,6 +195,7 @@ impl BanksClientExtensions for BanksClient {
                 latest_blockhash
             )
         ).await
+        .map_err(Into::into)
     }
 
     async fn create_token_account(
@@ -229,6 +231,7 @@ impl BanksClientExtensions for BanksClient {
                 latest_blockhash
             )
         ).await
+        .map_err(Into::into)
     }
 
     async fn create_associated_token_account(
