@@ -11,6 +11,7 @@ use solana_sdk::{
     sysvar::rent::Rent
 };
 use spl_associated_token_account::get_associated_token_address;
+use borsh::BorshSerialize;
 
 #[cfg(feature = "anchor")]
 use anchor_lang::{AnchorSerialize, Discriminator};
@@ -31,6 +32,9 @@ pub trait ProgramTestExtension {
     
     /// Adds a rent-exempt account with some Packable data to the test environment.
     fn add_account_with_packable<P: Pack>(&mut self, pubkey: Pubkey, owner: Pubkey, data: P);
+
+    /// Adds a rent-exempt account with some Borsh-serializable to the test environment
+    fn add_account_with_borsh<B: BorshSerialize>(&mut self, pubkey: Pubkey, owner: Pubkey, data: B);
     
     /// Adds an SPL Token Mint account to the test environment.
     fn add_token_mint(&mut self, pubkey: Pubkey, mint_authority: Option<Pubkey>, supply: u64, decimals: u8, freeze_authority: Option<Pubkey>);
@@ -120,6 +124,15 @@ impl ProgramTestExtension for ProgramTest {
             buf
         };
         self.add_account_with_data(pubkey, owner, &data, false);
+    }
+
+    fn add_account_with_borsh<B: BorshSerialize>(&mut self, pubkey: Pubkey, owner: Pubkey, data: B) {
+        self.add_account_with_data(
+            pubkey,
+            owner,
+            data.try_to_vec().expect("failed to serialize data").as_ref(),
+            false
+        );
     }
 
     fn add_token_mint(

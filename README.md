@@ -140,6 +140,18 @@ pub fn add_account_with_packable<P: Pack>(
 
 &nbsp;
 
+Add a rent-exempt account with some [`Borsh`](https://docs.rs/borsh/latest/borsh/)-serializable to the test environment
+```rust
+pub fn add_account_with_borsh<B: BorshSerialize>(
+    &mut self,
+    pubkey: Pubkey,
+    owner: Pubkey,
+    data: B
+)
+```
+
+&nbsp;
+
 Generate and add multiple accounts to the test environment.
 ```rust
 pub fn generate_accounts(
