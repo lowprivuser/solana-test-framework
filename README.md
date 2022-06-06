@@ -113,7 +113,7 @@ pub fn add_account_with_data(
 
 &nbsp;
 
-Add account with [`Anchor`]([`Anchor`](https://docs.rs/anchor-lang/latest/anchor_lang/attr.account.html).
+Add an [`Anchor`](https://docs.rs/anchor-lang/latest/anchor_lang/attr.account.html) account to the test environment.
 ```rust
 #[cfg(feature = "anchor")]
 pub fn add_account_with_anchor<T: AccountSerialize + AnchorSerialize + Discriminator>(
