@@ -23,13 +23,24 @@ async fn transaction_from_instructions(
 ```
 &nbsp;
 
-Return an [`Anchor`](https://docs.rs/anchor-lang/latest/anchor_lang/trait.AccountDeserialize.html) account of type `T` at given address at the time of the most recent root slot and deserialize its data.
+Return and deserialize an [`Anchor`](https://docs.rs/anchor-lang/latest/anchor_lang/trait.AccountDeserialize.html) account at the given address at the time of the most recent root slot.
 If the account is not found, `None` is returned.
 ```rust
 #[cfg(feature = "anchor")]
-fn get_anchor_account_data<T: AccountDeserialize>(
+fn get_account_with_anchor<T: AccountDeserialize>(
     &mut self,
     address: Pubkey
+) -> Pin<Box<dyn Future<Output = Result<T, BanksClientError>> + '_>>
+```
+
+&nbsp;
+
+Return and deserialize a [`Borsh`](https://docs.rs/borsh/latest/borsh/) account at the given address at the time of the most recent root slot.
+If the account is not found, `None` is returned.
+```rust
+fn get_account_with_borsh<T: BorshDeserialize>(
+    &mut self,
+    _address: Pubkey
 ) -> Pin<Box<dyn Future<Output = Result<T, BanksClientError>> + '_>>
 ```
 

@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use borsh::BorshDeserialize;
 use solana_program::program_pack::Pack;
 use solana_sdk::{
     instruction::Instruction,
@@ -21,13 +22,11 @@ use spl_associated_token_account::{
 #[cfg(feature = "anchor")]
 use anchor_lang::AccountDeserialize;
 
-#[cfg(feature = "anchor")]
 use futures::{
     Future,
     FutureExt
 };
 
-#[cfg(feature = "anchor")]
 use std::pin::Pin;
 
 pub use {
@@ -48,11 +47,19 @@ pub trait BanksClientExtensions {
         unimplemented!();
     }
 
-    /// Return the Anchor account of type T at the given address at the time of the most recent root slot
-    /// and deserialize its data.
-    /// If the account is not found, None is returned.
+    /// Return and deserialize an Anchor account at the given address at the time of the most recent root slot.
+    /// If the account is not found, `None` is returned.
     #[cfg(feature = "anchor")]
-    fn get_anchor_account_data<T: AccountDeserialize>(
+    fn get_account_with_anchor<T: AccountDeserialize>(
+        &mut self,
+        _address: Pubkey
+    ) -> Pin<Box<dyn Future<Output = Result<T, BanksClientError>> + '_>> {
+        unimplemented!();
+    }
+
+    /// Return and deserialize a Borsh account at the given address at the time of the most recent root slot.
+    /// If the account is not `found`, None is returned.
+    fn get_account_with_borsh<T: BorshDeserialize>(
         &mut self,
         _address: Pubkey
     ) -> Pin<Box<dyn Future<Output = Result<T, BanksClientError>> + '_>> {
@@ -126,13 +133,24 @@ impl BanksClientExtensions for BanksClient {
     }
 
     #[cfg(feature = "anchor")]
-    fn get_anchor_account_data<T: AccountDeserialize>(
+    fn get_account_with_anchor<T: AccountDeserialize>(
         &mut self,
         address: Pubkey,
     ) -> Pin<Box<dyn Future<Output = Result<T, BanksClientError>> + '_>> {
         Box::pin(self.get_account(address).map(|result| {
             let account = result?.ok_or(BanksClientError::ClientError("Account not found"))?;
             T::try_deserialize(&mut account.data.as_ref())
+                .map_err(|_| BanksClientError::ClientError("Failed to deserialize account"))
+        }))
+    }
+
+    fn get_account_with_borsh<T: BorshDeserialize>(
+        &mut self,
+        address: Pubkey,
+    ) -> Pin<Box<dyn Future<Output = Result<T, BanksClientError>> + '_>> {
+        Box::pin(self.get_account(address).map(|result| {
+            let account = result?.ok_or(BanksClientError::ClientError("Account not found"))?;
+            T::try_from_slice(&mut account.data.as_ref())
                 .map_err(|_| BanksClientError::ClientError("Failed to deserialize account"))
         }))
     }
