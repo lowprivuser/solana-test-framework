@@ -40,7 +40,7 @@ If the account is not found, `None` is returned.
 ```rust
 fn get_account_with_borsh<T: BorshDeserialize>(
     &mut self,
-    _address: Pubkey
+    address: Pubkey
 ) -> Pin<Box<dyn Future<Output = Result<T, BanksClientError>> + '_>>
 ```
 
