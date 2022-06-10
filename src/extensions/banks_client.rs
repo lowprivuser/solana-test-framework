@@ -318,6 +318,7 @@ impl BanksClientExtensions for BanksClient {
         .await
         .unwrap();
 
+        // 2. Write to buffer
         let deploy_ix = |offset: u32, bytes: Vec<u8>| {
             loader_instruction::write(&program_keypair.pubkey(), &bpf_loader::id(), offset, bytes)
         };
@@ -332,6 +333,7 @@ impl BanksClientExtensions for BanksClient {
             self.process_transaction(tx).await?;
         }
 
+        // 3. Finalize
         let finalize_msg = Message::new_with_blockhash(
             &[loader_instruction::finalize(
                 &program_keypair.pubkey(),
@@ -405,7 +407,7 @@ impl BanksClientExtensions for BanksClient {
             self.process_transaction(tx).await?;
         }
 
-        // Finalize
+        // 3. Finalize
         let finalize_msg = Message::new_with_blockhash(
             &bpf_loader_upgradeable::deploy_with_max_program_len(
                 &payer.pubkey(),
