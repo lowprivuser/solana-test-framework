@@ -106,11 +106,11 @@ pub trait BanksClientExtensions {
     /// Deploy upgradable program
     async fn deploy_upgradable_program(
         &mut self,
-        _filename: &str,
-        _buffer_pubkey: &Keypair,
+        _path_to_program: &str,
+        _buffer_keypair: &Keypair,
         _buffer_authority_signer: &Keypair,
+        _program_keypair: &Keypair,
         _payer: &Keypair,
-        _program_address: &Keypair,
     ) -> transport::Result<()> {
         unimplemented!();
     }
@@ -279,13 +279,13 @@ impl BanksClientExtensions for BanksClient {
     /// Deploy upgradable program
     async fn deploy_upgradable_program(
         &mut self,
-        filename: &str,
-        buffer_acc: &Keypair,
+        path_to_program: &str,
+        buffer_keypair: &Keypair,
         buffer_authority_signer: &Keypair,
-        program_address: &Keypair,
+        program_keypair: &Keypair,
         payer: &Keypair,
     ) -> transport::Result<()> {
-        let (buffer, buffer_len) = util::load_file_to_bytes(filename);
+        let (buffer, buffer_len) = util::load_file_to_bytes(path_to_program);
 
         let program_data = buffer;
 
@@ -300,7 +300,7 @@ impl BanksClientExtensions for BanksClient {
         // 1 Create buffer
         let create_buffer_ix = bpf_loader_upgradeable::create_buffer(
             &payer.pubkey(),
-            &buffer_acc.pubkey(),
+            &buffer_keypair.pubkey(),
             &buffer_authority_signer.pubkey(),
             minimum_balance,
             program_len,
@@ -308,13 +308,13 @@ impl BanksClientExtensions for BanksClient {
         .expect("Cannot create buffer");
 
         let message = Message::new(&create_buffer_ix, Some(&payer.pubkey()));
-        let tx = Transaction::new(&[payer, buffer_acc], message, latest_blockhash);
+        let tx = Transaction::new(&[payer, buffer_keypair], message, latest_blockhash);
         self.process_transaction(tx).await?;
 
         // 2 Write to buffer
         let deploy_ix = |offset: u32, bytes: Vec<u8>| {
             bpf_loader_upgradeable::write(
-                &buffer_acc.pubkey(),
+                &buffer_keypair.pubkey(),
                 &buffer_authority_signer.pubkey(),
                 offset,
                 bytes,
@@ -344,8 +344,8 @@ impl BanksClientExtensions for BanksClient {
         let finalize_msg = Message::new_with_blockhash(
             &bpf_loader_upgradeable::deploy_with_max_program_len(
                 &payer.pubkey(),
-                &program_address.pubkey(),
-                &buffer_acc.pubkey(),
+                &program_keypair.pubkey(),
+                &buffer_keypair.pubkey(),
                 &buffer_authority_signer.pubkey(),
                 minimum_balance,
                 program_len,
@@ -355,7 +355,7 @@ impl BanksClientExtensions for BanksClient {
             &latest_blockhash,
         );
         let finalize_tx = Transaction::new(
-            &[payer, program_address, buffer_authority_signer],
+            &[payer, program_keypair, buffer_authority_signer],
             finalize_msg,
             latest_blockhash,
         );
