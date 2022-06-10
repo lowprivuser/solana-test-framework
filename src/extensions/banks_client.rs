@@ -1,38 +1,30 @@
 use async_trait::async_trait;
 use borsh::BorshDeserialize;
-use solana_program::program_pack::Pack;
+use solana_program::{bpf_loader_upgradeable, program_pack::Pack};
 use solana_sdk::{
     instruction::Instruction,
+    message::Message,
+    packet::PACKET_DATA_SIZE,
     pubkey::Pubkey,
-    signature::{
-        Keypair,
-        Signer
-    },
+    signature::{Keypair, Signature, Signer},
     system_transaction,
     sysvar::rent::Rent,
     transaction::Transaction,
-    transport
+    transport,
 };
 
-use spl_associated_token_account::{
-    get_associated_token_address,
-    create_associated_token_account
-};
+use spl_associated_token_account::{create_associated_token_account, get_associated_token_address};
 
 #[cfg(feature = "anchor")]
 use anchor_lang::AccountDeserialize;
 
-use futures::{
-    Future,
-    FutureExt
-};
+use futures::{Future, FutureExt};
 
 use std::pin::Pin;
 
-pub use {
-    solana_banks_client::{BanksClient, BanksClientError},
-};
+pub use solana_banks_client::{BanksClient, BanksClientError};
 
+use crate::util;
 /// Convenience functions for BanksClient
 #[async_trait]
 pub trait BanksClientExtensions {
@@ -42,7 +34,7 @@ pub trait BanksClientExtensions {
         &mut self,
         _ixs: &[Instruction],
         _payer: &Keypair,
-        _signers: Vec<&Keypair>
+        _signers: Vec<&Keypair>,
     ) -> Result<Transaction, BanksClientError> {
         unimplemented!();
     }
@@ -52,7 +44,7 @@ pub trait BanksClientExtensions {
     #[cfg(feature = "anchor")]
     fn get_account_with_anchor<T: AccountDeserialize>(
         &mut self,
-        _address: Pubkey
+        _address: Pubkey,
     ) -> Pin<Box<dyn Future<Output = Result<T, BanksClientError>> + '_>> {
         unimplemented!();
     }
@@ -61,7 +53,7 @@ pub trait BanksClientExtensions {
     /// If the account is not `found`, None is returned.
     fn get_account_with_borsh<T: BorshDeserialize>(
         &mut self,
-        _address: Pubkey
+        _address: Pubkey,
     ) -> Pin<Box<dyn Future<Output = Result<T, BanksClientError>> + '_>> {
         unimplemented!();
     }
@@ -73,7 +65,7 @@ pub trait BanksClientExtensions {
         _to: &Keypair,
         _lamports: u64,
         _space: u64,
-        _owner: Pubkey
+        _owner: Pubkey,
     ) -> transport::Result<()> {
         unimplemented!();
     }
@@ -85,7 +77,7 @@ pub trait BanksClientExtensions {
         _authority: &Pubkey,
         _freeze_authority: Option<&Pubkey>,
         _decimals: u8,
-        _payer: &Keypair
+        _payer: &Keypair,
     ) -> transport::Result<()> {
         unimplemented!();
     }
@@ -96,7 +88,7 @@ pub trait BanksClientExtensions {
         _account: &Keypair,
         _authority: &Pubkey,
         _mint: &Pubkey,
-        _payer: &Keypair
+        _payer: &Keypair,
     ) -> transport::Result<()> {
         unimplemented!();
     }
@@ -106,8 +98,20 @@ pub trait BanksClientExtensions {
         &mut self,
         _authority: &Pubkey,
         _mint: &Pubkey,
-        _payer: &Keypair
+        _payer: &Keypair,
     ) -> transport::Result<Pubkey> {
+        unimplemented!();
+    }
+
+    /// Deploy upgradable program
+    async fn deploy_upgradable_program(
+        &mut self,
+        _filename: &str,
+        _buffer_pubkey: &Keypair,
+        _buffer_authority_signer: &Keypair,
+        _payer: &Keypair,
+        _program_address: &Keypair,
+    ) -> transport::Result<()> {
         unimplemented!();
     }
 }
@@ -118,18 +122,16 @@ impl BanksClientExtensions for BanksClient {
         &mut self,
         ixs: &[Instruction],
         payer: &Keypair,
-        signers: Vec<&Keypair>
+        signers: Vec<&Keypair>,
     ) -> Result<Transaction, BanksClientError> {
         let latest_blockhash = self.get_latest_blockhash().await?;
 
-        Ok(
-            Transaction::new_signed_with_payer(
-                ixs,
-                Some(&payer.pubkey()),
-                &signers,
-                latest_blockhash
-            )
-        )
+        Ok(Transaction::new_signed_with_payer(
+            ixs,
+            Some(&payer.pubkey()),
+            &signers,
+            latest_blockhash,
+        ))
     }
 
     #[cfg(feature = "anchor")]
@@ -161,20 +163,19 @@ impl BanksClientExtensions for BanksClient {
         to: &Keypair,
         lamports: u64,
         space: u64,
-        owner: Pubkey
+        owner: Pubkey,
     ) -> transport::Result<()> {
         let latest_blockhash = self.get_latest_blockhash().await?;
 
-        self.process_transaction(
-            system_transaction::create_account(
-                from,
-                to,
-                latest_blockhash,
-                lamports,
-                space,
-                &owner
-            )
-        ).await
+        self.process_transaction(system_transaction::create_account(
+            from,
+            to,
+            latest_blockhash,
+            lamports,
+            space,
+            &owner,
+        ))
+        .await
         .map_err(Into::into)
     }
 
@@ -184,7 +185,7 @@ impl BanksClientExtensions for BanksClient {
         authority: &Pubkey,
         freeze_authority: Option<&Pubkey>,
         decimals: u8,
-        payer: &Keypair
+        payer: &Keypair,
     ) -> transport::Result<()> {
         let latest_blockhash = self.get_latest_blockhash().await?;
         self.process_transaction(system_transaction::create_account(
@@ -193,8 +194,10 @@ impl BanksClientExtensions for BanksClient {
             latest_blockhash,
             Rent::default().minimum_balance(spl_token::state::Mint::get_packed_len()),
             spl_token::state::Mint::get_packed_len() as u64,
-            &spl_token::id()
-        )).await.unwrap();
+            &spl_token::id(),
+        ))
+        .await
+        .unwrap();
 
         let ix = spl_token::instruction::initialize_mint(
             &spl_token::id(),
@@ -205,14 +208,13 @@ impl BanksClientExtensions for BanksClient {
         )
         .unwrap();
 
-        self.process_transaction(
-            Transaction::new_signed_with_payer(
-                &[ix],
-                Some(&payer.pubkey()),
-                &[payer],
-                latest_blockhash
-            )
-        ).await
+        self.process_transaction(Transaction::new_signed_with_payer(
+            &[ix],
+            Some(&payer.pubkey()),
+            &[payer],
+            latest_blockhash,
+        ))
+        .await
         .map_err(Into::into)
     }
 
@@ -221,7 +223,7 @@ impl BanksClientExtensions for BanksClient {
         account: &Keypair,
         authority: &Pubkey,
         mint: &Pubkey,
-        payer: &Keypair
+        payer: &Keypair,
     ) -> transport::Result<()> {
         let latest_blockhash = self.get_latest_blockhash().await?;
         self.process_transaction(system_transaction::create_account(
@@ -230,25 +232,26 @@ impl BanksClientExtensions for BanksClient {
             latest_blockhash,
             Rent::default().minimum_balance(spl_token::state::Account::get_packed_len()),
             spl_token::state::Account::get_packed_len() as u64,
-            &spl_token::id()
-        )).await.unwrap();
+            &spl_token::id(),
+        ))
+        .await
+        .unwrap();
 
         let ix = spl_token::instruction::initialize_account(
             &spl_token::id(),
             &account.pubkey(),
             mint,
-            authority
+            authority,
         )
         .unwrap();
 
-        self.process_transaction(
-            Transaction::new_signed_with_payer(
-                &[ix],
-                Some(&payer.pubkey()),
-                &[payer],
-                latest_blockhash
-            )
-        ).await
+        self.process_transaction(Transaction::new_signed_with_payer(
+            &[ix],
+            Some(&payer.pubkey()),
+            &[payer],
+            latest_blockhash,
+        ))
+        .await
         .map_err(Into::into)
     }
 
@@ -256,25 +259,108 @@ impl BanksClientExtensions for BanksClient {
         &mut self,
         account: &Pubkey,
         mint: &Pubkey,
-        payer: &Keypair
-    ) -> transport::Result<Pubkey>  {
+        payer: &Keypair,
+    ) -> transport::Result<Pubkey> {
         let latest_blockhash = self.get_latest_blockhash().await?;
         let associated_token_account = get_associated_token_address(account, mint);
-        let ix = create_associated_token_account(
-            &payer.pubkey(), 
-            &account, 
-            &mint
-        );
+        let ix = create_associated_token_account(&payer.pubkey(), &account, &mint);
 
-        self.process_transaction(
-            Transaction::new_signed_with_payer(
-                &[ix],
-                Some(&payer.pubkey()),
-                &[payer],
-                latest_blockhash
-            )
-        ).await?;
+        self.process_transaction(Transaction::new_signed_with_payer(
+            &[ix],
+            Some(&payer.pubkey()),
+            &[payer],
+            latest_blockhash,
+        ))
+        .await?;
 
         return Ok(associated_token_account);
+    }
+
+    /// Deploy upgradable program
+    async fn deploy_upgradable_program(
+        &mut self,
+        filename: &str,
+        buffer_acc: &Keypair,
+        buffer_authority_signer: &Keypair,
+        program_address: &Keypair,
+        payer: &Keypair,
+    ) -> transport::Result<()> {
+        let (buffer, buffer_len) = util::load_file_to_bytes(filename);
+
+        let program_data = buffer;
+
+        // multiply by 2 so program can be updated later on
+        let program_len = buffer_len * 2;
+        let minimum_balance = Rent::default().minimum_balance(
+            bpf_loader_upgradeable::UpgradeableLoaderState::programdata_len(program_len)
+                .expect("Cannot get program len"),
+        );
+        let latest_blockhash = self.get_latest_blockhash().await?;
+
+        // 1 Create buffer
+        let create_buffer_ix = bpf_loader_upgradeable::create_buffer(
+            &payer.pubkey(),
+            &buffer_acc.pubkey(),
+            &buffer_authority_signer.pubkey(),
+            minimum_balance,
+            program_len,
+        )
+        .expect("Cannot create buffer");
+
+        let message = Message::new(&create_buffer_ix, Some(&payer.pubkey()));
+        let tx = Transaction::new(&[payer, buffer_acc], message, latest_blockhash);
+        self.process_transaction(tx).await?;
+
+        // 2 Write to buffer
+        let deploy_ix = |offset: u32, bytes: Vec<u8>| {
+            bpf_loader_upgradeable::write(
+                &buffer_acc.pubkey(),
+                &buffer_authority_signer.pubkey(),
+                offset,
+                bytes,
+            )
+        };
+
+        // calculate max_chunk_size
+        let baseline_ix = deploy_ix(0, Vec::new());
+        let baseline_tx = Transaction::new_signed_with_payer(
+            &[baseline_ix],
+            Some(&payer.pubkey()),
+            &[payer, buffer_authority_signer],
+            latest_blockhash,
+        );
+        let tx_size = bincode::serialized_size(&baseline_tx).unwrap() as usize;
+        // add 1 byte buffer to account for shortvec encoding
+        let chunk_size = PACKET_DATA_SIZE.saturating_sub(tx_size).saturating_sub(1);
+
+        for (chunk, i) in program_data.chunks(chunk_size).zip(0..) {
+            let ix = deploy_ix(i * chunk_size as u32, chunk.to_vec());
+            let message = Message::new(&[ix], Some(&payer.pubkey()));
+            let tx = Transaction::new(&[payer, buffer_authority_signer], message, latest_blockhash);
+            self.process_transaction(tx).await?;
+        }
+
+        // Finalize
+        let finalize_msg = Message::new_with_blockhash(
+            &bpf_loader_upgradeable::deploy_with_max_program_len(
+                &payer.pubkey(),
+                &program_address.pubkey(),
+                &buffer_acc.pubkey(),
+                &buffer_authority_signer.pubkey(),
+                minimum_balance,
+                program_len,
+            )
+            .expect("Cannot parse deploy instruction"),
+            Some(&payer.pubkey()),
+            &latest_blockhash,
+        );
+        let finalize_tx = Transaction::new(
+            &[payer, program_address, buffer_authority_signer],
+            finalize_msg,
+            latest_blockhash,
+        );
+        self.process_transaction(finalize_tx).await?;
+
+        return Ok(());
     }
 }
