@@ -287,7 +287,6 @@ impl BanksClientExtensions for BanksClient {
         return Ok(associated_token_account);
     }
 
-    /// Deploy upgradable program
     async fn deploy_program(
         &mut self,
         path_to_program: &str,
@@ -349,7 +348,6 @@ impl BanksClientExtensions for BanksClient {
         return Ok(());
     }
 
-    /// Deploy upgradable program
     async fn deploy_upgradable_program(
         &mut self,
         path_to_program: &str,
