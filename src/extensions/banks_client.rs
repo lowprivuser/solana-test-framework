@@ -7,7 +7,7 @@ use solana_sdk::{
     loader_instruction,
     message::Message,
     pubkey::Pubkey,
-    signature::{Keypair, Signature, Signer},
+    signature::{Keypair, Signer},
     system_transaction,
     sysvar::rent::Rent,
     transaction::Transaction,

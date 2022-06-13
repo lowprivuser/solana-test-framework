@@ -2,7 +2,7 @@ use solana_sdk::{
     hash::Hash,
     instruction::Instruction,
     packet::PACKET_DATA_SIZE,
-    signature::{Keypair, Signer},
+    signature::Signer,
     transaction::Transaction,
 };
 use std::fs::{metadata, File};

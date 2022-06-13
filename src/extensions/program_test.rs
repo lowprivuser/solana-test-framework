@@ -18,33 +18,89 @@ use anchor_lang::{AnchorSerialize, Discriminator};
 
 pub trait ProgramTestExtension {
     /// Adds a requested number of account with initial balance of 1_000 SOL to the test environment
-    fn generate_accounts(&mut self, number_of_accounts: u8) -> Vec<Keypair>;
+    fn generate_accounts(
+        &mut self,
+        number_of_accounts: u8
+    ) -> Vec<Keypair>;
     
     /// Add a rent-exempt account with some data to the test environment.
-    fn add_account_with_data(&mut self, pubkey: Pubkey, owner: Pubkey, data: &[u8], executable: bool);
+    fn add_account_with_data(
+        &mut self,
+        pubkey: Pubkey,
+        owner: Pubkey,
+        data: &[u8],
+        executable: bool
+    );
     
     #[cfg(feature = "anchor")]
     /// Adds an Anchor account.
-    fn add_account_with_anchor<T: AnchorSerialize + Discriminator>(&mut self, pubkey: Pubkey, owner: Pubkey, anchor_data: T, executable: bool);
+    fn add_account_with_anchor<T: AnchorSerialize + Discriminator>(
+        &mut self,
+        pubkey: Pubkey,
+        owner: Pubkey,
+        anchor_data: T,
+        executable: bool
+    );
     
     /// Adds an account with the given balance to the test environment.
-    fn add_account_with_lamports(&mut self, pubkey: Pubkey, owner: Pubkey, lamports: u64);
+    fn add_account_with_lamports(
+        &mut self,
+        pubkey: Pubkey,
+        owner: Pubkey,
+        lamports: u64
+    );
     
     /// Adds a rent-exempt account with some Packable data to the test environment.
-    fn add_account_with_packable<P: Pack>(&mut self, pubkey: Pubkey, owner: Pubkey, data: P);
+    fn add_account_with_packable<P: Pack>(
+        &mut self,
+        pubkey: Pubkey,
+        owner: Pubkey,
+        data: P
+    );
 
     /// Adds a rent-exempt account with some Borsh-serializable to the test environment
-    fn add_account_with_borsh<B: BorshSerialize>(&mut self, pubkey: Pubkey, owner: Pubkey, data: B);
+    fn add_account_with_borsh<B: BorshSerialize>(
+        &mut self,
+        pubkey: Pubkey,
+        owner: Pubkey,
+        data: B
+    );
     
     /// Adds an SPL Token Mint account to the test environment.
-    fn add_token_mint(&mut self, pubkey: Pubkey, mint_authority: Option<Pubkey>, supply: u64, decimals: u8, freeze_authority: Option<Pubkey>);
+    fn add_token_mint(
+        &mut self,
+        pubkey: Pubkey,
+        mint_authority: Option<Pubkey>,
+        supply: u64,
+        decimals: u8,
+        freeze_authority: Option<Pubkey>
+    );
     
     /// Adds an SPL Token account to the test environment.
-    fn add_token_account(&mut self, pubkey: Pubkey, mint: Pubkey, owner: Pubkey, amount: u64);
+    fn add_token_account(
+        &mut self,
+        pubkey: Pubkey,
+        mint: Pubkey,
+        owner: Pubkey,
+        amount: u64,
+        delegate: Option<Pubkey>,
+        is_native: Option<u64>,
+        delegated_amount: u64,
+        close_authority: Option<Pubkey>
+    );
     
     // Adds an associated token account to the test environment.
     // Returns the address of the created account.
-    fn add_associated_token_account(&mut self, owner: Pubkey, mint: Pubkey, amount: u64) -> Pubkey;
+    fn add_associated_token_account(
+        &mut self,
+        mint: Pubkey,
+        owner: Pubkey,
+        amount: u64,
+        delegate: Option<Pubkey>,
+        is_native: Option<u64>,
+        delegated_amount: u64,
+        close_authority: Option<Pubkey>
+    ) -> Pubkey;
 }
 
 impl ProgramTestExtension for ProgramTest {
@@ -145,13 +201,13 @@ impl ProgramTestExtension for ProgramTest {
     ) {
         self.add_account_with_packable(
             pubkey,
-            spl_token::ID,
+            spl_token::id(),
             spl_token::state::Mint {
-                mint_authority: COption::from(mint_authority.map(|c| c.clone())),
+                mint_authority: COption::from(mint_authority),
                 supply,
                 decimals,
                 is_initialized: true,
-                freeze_authority: COption::from(freeze_authority.map(|c| c.clone())),
+                freeze_authority: COption::from(freeze_authority)
             }
         );
     }
@@ -162,43 +218,47 @@ impl ProgramTestExtension for ProgramTest {
         mint: Pubkey,
         owner: Pubkey,
         amount: u64,
+        delegate: Option<Pubkey>,
+        is_native: Option<u64>,
+        delegated_amount: u64,
+        close_authority: Option<Pubkey>
     ) {
         self.add_account_with_packable(
             pubkey,
-            spl_token::ID,
+            spl_token::id(),
             spl_token::state::Account {
                 mint,
                 owner,
                 amount,
-                delegate: COption::None,
+                delegate: COption::from(delegate),
                 state: spl_token::state::AccountState::Initialized,
-                is_native: COption::None,
-                delegated_amount: 0,
-                close_authority: COption::None,
+                is_native: COption::from(is_native),
+                delegated_amount,
+                close_authority: COption::from(close_authority),
             }
         );
     }
 
     fn add_associated_token_account(
         &mut self,
-        owner: Pubkey,
         mint: Pubkey,
+        owner: Pubkey,
         amount: u64,
+        delegate: Option<Pubkey>,
+        is_native: Option<u64>,
+        delegated_amount: u64,
+        close_authority: Option<Pubkey>
     ) -> Pubkey {
         let pubkey = get_associated_token_address(&owner, &mint);
-        self.add_account_with_packable(
+        self.add_token_account(
             pubkey,
-            spl_token::ID,
-            spl_token::state::Account {
-                mint,
-                owner,
-                amount,
-                delegate: COption::None,
-                state: spl_token::state::AccountState::Initialized,
-                is_native: COption::None,
-                delegated_amount: 0,
-                close_authority: COption::None,
-            }
+            mint,
+            owner,
+            amount,
+            delegate,
+            is_native,
+            delegated_amount,
+            close_authority
         );
 
         pubkey

@@ -205,12 +205,16 @@ pub fn add_token_mint(
 Add an SPL Token [`Account`](https://docs.rs/spl-token/latest/spl_token/state/struct.Account.html) to the test environment.
 
 ```rust
-pub fn add_token_account(
+fn add_token_account(
     &mut self,
     pubkey: Pubkey,
     mint: Pubkey,
     owner: Pubkey,
     amount: u64,
+    delegate: Option<Pubkey>,
+    is_native: Option<u64>,
+    delegated_amount: u64,
+    close_authority: Option<Pubkey>
 )
 ```
 
@@ -220,11 +224,15 @@ Add an [associated SPL Token account](https://spl.solana.com/associated-token-ac
 Returns the address of the created account.
 
 ```rust
-pub fn add_associated_token_account(
+fn add_associated_token_account(
     &mut self,
-    owner: Pubkey,
     mint: Pubkey,
+    owner: Pubkey,
     amount: u64,
+    delegate: Option<Pubkey>,
+    is_native: Option<u64>,
+    delegated_amount: u64,
+    close_authority: Option<Pubkey>
 ) -> Pubkey
 ```
 
