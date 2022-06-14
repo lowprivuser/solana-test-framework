@@ -163,7 +163,7 @@ impl BanksClientExtensions for BanksClient {
     ) -> Pin<Box<dyn Future<Output = Result<T, BanksClientError>> + '_>> {
         Box::pin(self.get_account(address).map(|result| {
             let account = result?.ok_or(BanksClientError::ClientError("Account not found"))?;
-            T::try_from_slice(&mut account.data.as_ref())
+            T::deserialize(&mut account.data.as_ref())
                 .map_err(|_| BanksClientError::ClientError("Failed to deserialize account"))
         }))
     }
