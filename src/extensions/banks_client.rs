@@ -1,6 +1,9 @@
 use async_trait::async_trait;
 use borsh::BorshDeserialize;
-use solana_program::{bpf_loader_upgradeable, program_pack::Pack};
+use solana_program::{
+    bpf_loader_upgradeable,
+    program_pack::Pack
+};
 use solana_sdk::{
     bpf_loader,
     instruction::Instruction,
@@ -13,15 +16,16 @@ use solana_sdk::{
     transaction::Transaction,
     transport,
 };
-
-use spl_associated_token_account::{create_associated_token_account, get_associated_token_address};
+use spl_associated_token_account::{
+    instruction::create_associated_token_account,
+    get_associated_token_address
+};
+use futures::{Future, FutureExt};
+use std::pin::Pin;
 
 #[cfg(feature = "anchor")]
 use anchor_lang::AccountDeserialize;
 
-use futures::{Future, FutureExt};
-
-use std::pin::Pin;
 
 pub use solana_banks_client::{BanksClient, BanksClientError};
 
