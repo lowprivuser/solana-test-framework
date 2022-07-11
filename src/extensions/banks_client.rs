@@ -17,7 +17,7 @@ use solana_sdk::{
     transport,
 };
 use spl_associated_token_account::{
-    instruction::create_associated_token_account,
+    create_associated_token_account,
     get_associated_token_address
 };
 use futures::{Future, FutureExt};
