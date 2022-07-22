@@ -326,13 +326,23 @@ impl BanksClientExtensions for BanksClient {
             loader_instruction::write(&program_keypair.pubkey(), &bpf_loader::id(), offset, bytes)
         };
 
-        let chunk_size =
-            util::calculate_chunk_size(&deploy_ix, &vec![payer, program_keypair], latest_blockhash);
+        let chunk_size = util::calculate_chunk_size(
+            &deploy_ix,
+            &vec![payer, program_keypair],
+        );
 
         for (chunk, i) in program_data.chunks(chunk_size).zip(0..) {
             let ix = deploy_ix(i * chunk_size as u32, chunk.to_vec());
-            let message = Message::new(&[ix], Some(&payer.pubkey()));
-            let tx = Transaction::new(&[payer, program_keypair], message, latest_blockhash);
+            // let message = Message::new(&[ix], Some(&payer.pubkey()));
+            // let tx = Transaction::new(&[payer, program_keypair], message, latest_blockhash);
+            let tx = self.transaction_from_instructions(
+                &[ix],
+                &payer,
+                vec![
+                    &payer
+                ]
+            ).await.unwrap();
+
             self.process_transaction(tx).await?;
         }
 
@@ -370,7 +380,6 @@ impl BanksClientExtensions for BanksClient {
             bpf_loader_upgradeable::UpgradeableLoaderState::programdata_len(program_len)
                 .expect("Cannot get program len"),
         );
-        let latest_blockhash = self.get_latest_blockhash().await?;
 
         // 1 Create buffer
         let create_buffer_ix = bpf_loader_upgradeable::create_buffer(
@@ -382,8 +391,15 @@ impl BanksClientExtensions for BanksClient {
         )
         .expect("Cannot create buffer");
 
-        let message = Message::new(&create_buffer_ix, Some(&payer.pubkey()));
-        let tx = Transaction::new(&[payer, buffer_keypair], message, latest_blockhash);
+        let mut tx = self.transaction_from_instructions(
+            create_buffer_ix.as_ref(),
+            &payer,
+            vec![
+                &payer,
+                &buffer_keypair
+            ]
+        ).await.unwrap();
+
         self.process_transaction(tx).await?;
 
         // 2 Write to buffer
@@ -398,20 +414,24 @@ impl BanksClientExtensions for BanksClient {
 
         let chunk_size = util::calculate_chunk_size(
             &deploy_ix,
-            &vec![payer, buffer_authority_signer],
-            latest_blockhash,
+            &vec![payer, buffer_authority_signer]
         );
 
         for (chunk, i) in program_data.chunks(chunk_size).zip(0..) {
             let ix = deploy_ix(i * chunk_size as u32, chunk.to_vec());
-            let message = Message::new(&[ix], Some(&payer.pubkey()));
-            let tx = Transaction::new(&[payer, buffer_authority_signer], message, latest_blockhash);
+
+            tx = self.transaction_from_instructions(
+                &[ix],
+                &payer,
+                vec![&payer, &buffer_authority_signer]
+            ).await.unwrap();
+
             self.process_transaction(tx).await?;
         }
 
         // 3. Finalize
-        let finalize_msg = Message::new_with_blockhash(
-            &bpf_loader_upgradeable::deploy_with_max_program_len(
+        tx = self.transaction_from_instructions(
+            bpf_loader_upgradeable::deploy_with_max_program_len(
                 &payer.pubkey(),
                 &program_keypair.pubkey(),
                 &buffer_keypair.pubkey(),
@@ -419,16 +439,15 @@ impl BanksClientExtensions for BanksClient {
                 minimum_balance,
                 program_len,
             )
-            .expect("Cannot parse deploy instruction"),
-            Some(&payer.pubkey()),
-            &latest_blockhash,
-        );
-        let finalize_tx = Transaction::new(
-            &[payer, program_keypair, buffer_authority_signer],
-            finalize_msg,
-            latest_blockhash,
-        );
-        self.process_transaction(finalize_tx).await?;
+            .expect("Cannot parse deploy instruction").as_ref(),
+            &payer,
+            vec![
+                &payer,
+                &program_keypair,
+                &buffer_authority_signer
+            ]
+        ).await.unwrap();
+        self.process_transaction(tx).await?;
 
         return Ok(());
     }

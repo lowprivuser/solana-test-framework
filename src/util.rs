@@ -20,14 +20,14 @@ pub fn load_file_to_bytes(filename: &str) -> (Vec<u8>, usize) {
 pub fn calculate_chunk_size<F: Fn(u32, Vec<u8>) -> Instruction>(
     deploy_ix: F,
     signers: &Vec<&dyn Signer>,
-    latest_blockhash: Hash,
+    // latest_blockhash: Hash,
 ) -> usize {
     let baseline_ix = deploy_ix(0, Vec::new());
     let baseline_tx = Transaction::new_signed_with_payer(
         &[baseline_ix],
         Some(&signers[0].pubkey()),
         signers,
-        latest_blockhash,
+        Hash::default(),
     );
     let tx_size = bincode::serialized_size(&baseline_tx).unwrap() as usize;
     // add 1 byte buffer to account for shortvec encoding
