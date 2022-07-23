@@ -1,6 +1,6 @@
 # solana-test-framework
 
-`solana-test-framework` provides a [`BanksClient`](https://docs.rs/solana-banks-client/latest/solana_banks_client/struct.BanksClient.html)-based Proof of Concept framework for BPF programs.
+`solana-test-framework` is build on top of the [`solana-program-test`](https://docs.rs/crate/solana-program-test/latest) crate and it provides a [`BanksClient`](https://docs.rs/solana-banks-client/latest/solana_banks_client/struct.BanksClient.html)-based Proof of Concept framework for BPF programs.
 It extends [`BanksClient`](https://docs.rs/solana-banks-client/latest/solana_banks_client/struct.BanksClient.html),
 [`ProgramTest`](https://docs.rs/solana-program-test/latest/solana_program_test/struct.ProgramTest.html)
 and [`ProgramTestContext`](https://docs.rs/solana-program-test/latest/solana_program_test/struct.ProgramTestContext.html) with several convenience methods.
@@ -8,7 +8,20 @@ and [`ProgramTestContext`](https://docs.rs/solana-program-test/latest/solana_pro
 &nbsp;
 &nbsp;
 
-## [`BanksClient`](https://docs.rs/solana-banks-client/latest/solana_banks_client/struct.BanksClient.html) extensions
+## Setup
+This framework supports Solana v1.9 and Anchor v0.24.2 **OR** Solana v1.10 and Anchor v0.25.0. To use it in your project,
+
+1. add one of the following in your `Cargo.toml`:
+ 
+    - Solana ~1.9: `solana-test-framework = { git = "https://github.com/lowprivuser/solana-test-framework"}`
+    - Solana ~1.10: `solana-test-framework = { git = "https://github.com/lowprivuser/solana-test-framework", branch = "solana1.10" }`
+
+2. include `features = ["anchor"]` in your dependency declaration if you want to enable Anchor convenience methods
+
+&nbsp;
+
+## Docs
+### [`BanksClient`](https://docs.rs/solana-banks-client/latest/solana_banks_client/struct.BanksClient.html) extensions
 
 Assemble the given instructions into a transaction and sign it.
 All transactions created with this method are signed and payed for by the payer.
@@ -106,7 +119,7 @@ async fn create_associated_token_account(
 
 &nbsp;
 
-## [`ProgramTest`](https://docs.rs/solana-program-test/latest/solana_program_test/struct.ProgramTest.html) extensions
+### [`ProgramTest`](https://docs.rs/solana-program-test/latest/solana_program_test/struct.ProgramTest.html) extensions
 
 Add a rent-exempt account with some data to the test environment.
 
@@ -238,7 +251,7 @@ fn add_associated_token_account(
 
 &nbsp;
 
-## [`ProgramTestContext`](https://docs.rs/solana-program-test/latest/solana_program_test/struct.ProgramTestContext.html) extensions
+### [`ProgramTestContext`](https://docs.rs/solana-program-test/latest/solana_program_test/struct.ProgramTestContext.html) extensions
 
 Advance the internal clock to the provided timestamp.
 
