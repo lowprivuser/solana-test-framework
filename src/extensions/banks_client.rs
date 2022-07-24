@@ -126,6 +126,7 @@ pub trait BanksClientExtensions {
         _buffer_authority_signer: &Keypair,
         _program_keypair: &Keypair,
         _payer: &Keypair,
+        _upgrade: bool
     ) -> transport::Result<()> {
         unimplemented!();
     }
@@ -369,6 +370,7 @@ impl BanksClientExtensions for BanksClient {
         buffer_authority_signer: &Keypair,
         program_keypair: &Keypair,
         payer: &Keypair,
+        upgrade: bool
     ) -> transport::Result<()> {
         let (buffer, buffer_len) = util::load_file_to_bytes(path_to_program);
 
@@ -391,7 +393,7 @@ impl BanksClientExtensions for BanksClient {
         )
         .expect("Cannot create buffer");
 
-        let mut tx = self.transaction_from_instructions(
+        let tx = self.transaction_from_instructions(
             create_buffer_ix.as_ref(),
             &payer,
             vec![
@@ -420,7 +422,7 @@ impl BanksClientExtensions for BanksClient {
         for (chunk, i) in program_data.chunks(chunk_size).zip(0..) {
             let ix = deploy_ix(i * chunk_size as u32, chunk.to_vec());
 
-            tx = self.transaction_from_instructions(
+            let tx = self.transaction_from_instructions(
                 &[ix],
                 &payer,
                 vec![&payer, &buffer_authority_signer]
@@ -429,8 +431,7 @@ impl BanksClientExtensions for BanksClient {
             self.process_transaction(tx).await?;
         }
 
-        // 3. Finalize
-        tx = self.transaction_from_instructions(
+        let ix = if !upgrade { 
             bpf_loader_upgradeable::deploy_with_max_program_len(
                 &payer.pubkey(),
                 &program_keypair.pubkey(),
@@ -438,15 +439,34 @@ impl BanksClientExtensions for BanksClient {
                 &buffer_authority_signer.pubkey(),
                 minimum_balance,
                 program_len,
-            )
-            .expect("Cannot parse deploy instruction").as_ref(),
-            &payer,
+            ).expect("Cannot parse deploy instruction")
+        } else {
             vec![
-                &payer,
-                &program_keypair,
-                &buffer_authority_signer
+                bpf_loader_upgradeable::upgrade(
+                    &program_keypair.pubkey(),
+                    &buffer_keypair.pubkey(),
+                    &buffer_authority_signer.pubkey(),
+                    &payer.pubkey(),
+                )
             ]
+        };
+
+        let mut signers = vec![
+            buffer_authority_signer,
+            payer
+        ];
+
+        if !upgrade {
+            signers.push(program_keypair);
+        }
+
+        // 3. Finalize
+        let tx = self.transaction_from_instructions(
+            ix.as_ref(),
+            &payer,
+            signers
         ).await.unwrap();
+
         self.process_transaction(tx).await?;
 
         return Ok(());
