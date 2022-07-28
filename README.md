@@ -1,3 +1,5 @@
+_This repository has been retired. The code is maintaned [here](https://github.com/halbornlabs/solana-test-framework)._
+
 # solana-test-framework
 
 `solana-test-framework` is build on top of the [`solana-program-test`](https://docs.rs/crate/solana-program-test/latest) crate and it provides a [`BanksClient`](https://docs.rs/solana-banks-client/latest/solana_banks_client/struct.BanksClient.html)-based Proof of Concept framework for BPF programs.
