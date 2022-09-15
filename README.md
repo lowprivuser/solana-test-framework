@@ -1,4 +1,4 @@
-_This repository has been retired. The code is maintaned [here](https://github.com/halbornlabs/solana-test-framework)._
+_This repository has been retired. The code is maintaned [here](https://github.com/halbornteam/solana-test-framework)._
 
 # solana-test-framework
 
